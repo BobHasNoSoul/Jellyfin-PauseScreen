@@ -212,6 +212,18 @@
         }, 500);
     }
 
+function handleOverlayClick(event) {
+    if (event.target === overlay) { // Ensure only clicks directly on the overlay trigger it
+        overlay.style.display = "none";
+        const videoPlayer = document.querySelector('video');
+        if (videoPlayer && videoPlayer.paused) {
+            videoPlayer.play();
+        }
+    }
+}
+
+overlay.addEventListener("click", handleOverlayClick);
+
     interceptNetworkRequests();
     monitorPlaybackState();
     monitorURLChange();
