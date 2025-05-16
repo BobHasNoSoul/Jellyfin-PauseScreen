@@ -140,6 +140,17 @@ enjoy
 -BobHasNoSoul
 
 
+FAQ:
+
+it doesnt show up wth?
+okay so im going to slowly explain this to you you need to do two things clear the cache and then play any item in the server and reload normally and it will just work.
+
+to clear your cache just disable cache in the dev menu right click anywhere on your servers main page > inspect > network tab > far right there is a check box that says disable caching.. check the box
+
+then play any content... any content at all
+
+go back to the main page and press f5 
+
 
 
 upcoming new mod is extrafanart ressurection (yes with fluid injection for that nice sleek retainable mod) and avatars injection script, changename script that changes the page title whenever it sees the word Jellyfin and last but not least an attempt at a plugin with the file transformation plugin that will hopefully give users global overrides for almost all of the defaults in jellyfins usually per user settings 
