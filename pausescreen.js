@@ -1,9 +1,9 @@
 (function() {
-    let userId = null;
-    let token = null;
-    let currentItemId = null; // Track the currently paused item
+    let PAUSESCREEN_userId = null;
+    let PAUSESCREEN_token = null;
+    let PAUSESCREEN_currentItemId = null; // Track the currently paused item
 
-    const getJellyfinCredentials = () => {
+    const PAUSESCREEN_getJellyfinCredentials = () => {
         const jellyfinCreds = localStorage.getItem("jellyfin_credentials");
         try {
             const serverCredentials = JSON.parse(jellyfinCreds);
@@ -18,16 +18,16 @@
         }
     };
 
-    const credentials = getJellyfinCredentials();
-    if (!credentials) return;
-    userId = credentials.userId;
-    token = credentials.token;
+    const PAUSESCREEN_credentials = PAUSESCREEN_getJellyfinCredentials();
+    if (!PAUSESCREEN_credentials) return;
+    PAUSESCREEN_userId = PAUSESCREEN_credentials.userId;
+    PAUSESCREEN_token = PAUSESCREEN_credentials.token;
 
-    console.log("Using UserID:", userId);
+    console.log("Using UserID:", PAUSESCREEN_userId);
 
-    const overlay = document.createElement("div");
-    overlay.id = "video-overlay";
-    overlay.style = `
+    const PAUSESCREEN_overlay = document.createElement("div");
+    PAUSESCREEN_overlay.id = "video-overlay";
+    PAUSESCREEN_overlay.style = `
         position: fixed;
         top: 0;
         left: 0;
@@ -41,48 +41,48 @@
         color: white;
     `;
 
-    const overlayContent = document.createElement("div");
-    overlayContent.id = "overlay-content";
-    overlayContent.style = "display: flex; align-items: center; justify-content: center; text-align: center;";
+    const PAUSESCREEN_overlayContent = document.createElement("div");
+    PAUSESCREEN_overlayContent.id = "overlay-content";
+    PAUSESCREEN_overlayContent.style = "display: flex; align-items: center; justify-content: center; text-align: center;";
 
-    const overlayLogo = document.createElement("img");
-    overlayLogo.id = "overlay-logo";
-    overlayLogo.style = "width: 50vw; height: auto; margin-right: 50vw; display: none;";
+    const PAUSESCREEN_overlayLogo = document.createElement("img");
+    PAUSESCREEN_overlayLogo.id = "overlay-logo";
+    PAUSESCREEN_overlayLogo.style = "width: 50vw; height: auto; margin-right: 50vw; display: none;";
 
-    const overlayPlot = document.createElement("div");
-    overlayPlot.id = "overlay-plot";
-    overlayPlot.style = "top: 38vh; max-width: 40%; height: 50vh; display: block; right: 5vw; position: absolute;";
+    const PAUSESCREEN_overlayPlot = document.createElement("div");
+    PAUSESCREEN_overlayPlot.id = "overlay-plot";
+    PAUSESCREEN_overlayPlot.style = "top: 38vh; max-width: 40%; height: 50vh; display: block; right: 5vw; position: absolute;";
 
-    overlayContent.appendChild(overlayLogo);
-    overlayContent.appendChild(overlayPlot);
-    overlay.appendChild(overlayContent);
+    PAUSESCREEN_overlayContent.appendChild(PAUSESCREEN_overlayLogo);
+    PAUSESCREEN_overlayContent.appendChild(PAUSESCREEN_overlayPlot);
+    PAUSESCREEN_overlay.appendChild(PAUSESCREEN_overlayContent);
 
-    const overlayDisc = document.createElement("img");
-    overlayDisc.id = "overlay-disc";
-    overlayDisc.style = `
+    const PAUSESCREEN_overlayDisc = document.createElement("img");
+    PAUSESCREEN_overlayDisc.id = "overlay-disc";
+    PAUSESCREEN_overlayDisc.style = `
         position: absolute;
         top: 5vh;
         right: 4vw;
         width: 10vw;
         height: auto;
         display: none;
-        animation: spin 10s linear infinite;
+        animation: PAUSESCREEN_spin 10s linear infinite;
     `;
-    overlay.appendChild(overlayDisc);
+    PAUSESCREEN_overlay.appendChild(PAUSESCREEN_overlayDisc);
 
-    const discStyle = document.createElement("style");
-    discStyle.textContent = `
-        @keyframes spin {
+    const PAUSESCREEN_discStyle = document.createElement("style");
+    PAUSESCREEN_discStyle.textContent = `
+        @keyframes PAUSESCREEN_spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
     `;
-    document.head.appendChild(discStyle);
+    document.head.appendChild(PAUSESCREEN_discStyle);
 
-    document.body.appendChild(overlay);
+    document.body.appendChild(PAUSESCREEN_overlay);
 
-    const styleOverride = document.createElement("style");
-    styleOverride.textContent = `
+    const PAUSESCREEN_styleOverride = document.createElement("style");
+    PAUSESCREEN_styleOverride.textContent = `
         .videoOsdBottom {
             z-index: 1 !important;
         }
@@ -90,20 +90,20 @@
             z-index: -1 !important;
         }
     `;
-    document.head.appendChild(styleOverride);
+    document.head.appendChild(PAUSESCREEN_styleOverride);
 
-    function clearOverlay() {
-        overlay.style.display = "none";
-        overlayLogo.src = "";
-        overlayLogo.style.display = "none";
-        overlayDisc.src = "";
-        overlayDisc.style.display = "none";
-        overlayPlot.textContent = "";
-        overlayPlot.style.display = "none";
-        currentItemId = null; // Reset current item tracking
+    function PAUSESCREEN_clearOverlay() {
+        PAUSESCREEN_overlay.style.display = "none";
+        PAUSESCREEN_overlayLogo.src = "";
+        PAUSESCREEN_overlayLogo.style.display = "none";
+        PAUSESCREEN_overlayDisc.src = "";
+        PAUSESCREEN_overlayDisc.style.display = "none";
+        PAUSESCREEN_overlayPlot.textContent = "";
+        PAUSESCREEN_overlayPlot.style.display = "none";
+        PAUSESCREEN_currentItemId = null;
     }
 
-    async function fetchImage(url) {
+    async function PAUSESCREEN_fetchImage(url) {
         try {
             const response = await fetch(url, { method: 'HEAD' });
             return response.ok ? url : null;
@@ -112,24 +112,23 @@
         }
     }
 
-    async function fetchItemDetails(itemId) {
-        if (currentItemId === itemId) return; // Prevent redundant fetches
+    async function PAUSESCREEN_fetchItemDetails(itemId) {
+        if (PAUSESCREEN_currentItemId === itemId) return; // Prevent redundant fetches
 
-        clearOverlay(); // Clear old item data before fetching new
+        PAUSESCREEN_clearOverlay();
 
         console.log("Fetching details for item:", itemId);
         try {
-            const response = await fetch(`${window.location.origin}/Users/${userId}/Items/${itemId}`, {
+            const response = await fetch(`${window.location.origin}/Users/${PAUSESCREEN_userId}/Items/${itemId}`, {
                 headers: {
-                    Authorization: `MediaBrowser Client="Jellyfin Web", Device="YourDeviceName", DeviceId="YourDeviceId", Version="YourClientVersion", Token="${token}"`
+                    Authorization: `MediaBrowser Client="Jellyfin Web", Device="YourDeviceName", DeviceId="YourDeviceId", Version="YourClientVersion", Token="${PAUSESCREEN_token}"`
                 }
             });
             if (!response.ok) throw new Error("Failed to fetch item details");
 
             const item = await response.json();
-            currentItemId = item.Id; // Update currently displayed item
+            PAUSESCREEN_currentItemId = item.Id;
 
-            // Fetch images with prioritization
             const imageSources = [
                 `${window.location.origin}/Items/${item.Id}/Images/Logo`,
                 item.ParentId ? `${window.location.origin}/Items/${item.ParentId}/Images/Logo` : null,
@@ -143,88 +142,108 @@
             ].filter(Boolean);
 
             const [logoResults, discResults] = await Promise.all([
-                Promise.all(imageSources.map(fetchImage)),
-                Promise.all(discSources.map(fetchImage))
+                Promise.all(imageSources.map(PAUSESCREEN_fetchImage)),
+                Promise.all(discSources.map(PAUSESCREEN_fetchImage))
             ]);
 
             const logoUrl = logoResults.find(url => url !== null);
             const discUrl = discResults.find(url => url !== null);
 
             if (logoUrl) {
-                overlayLogo.src = logoUrl;
-                overlayLogo.style.display = "block";
+                PAUSESCREEN_overlayLogo.src = logoUrl;
+                PAUSESCREEN_overlayLogo.style.display = "block";
             } else {
-                overlayLogo.style.display = "none";
+                PAUSESCREEN_overlayLogo.style.display = "none";
             }
 
             if (discUrl) {
-                overlayDisc.src = discUrl;
-                overlayDisc.style.display = "block";
+                PAUSESCREEN_overlayDisc.src = discUrl;
+                PAUSESCREEN_overlayDisc.style.display = "block";
             } else {
-                overlayDisc.style.display = "none";
+                PAUSESCREEN_overlayDisc.style.display = "none";
             }
 
-            overlayPlot.textContent = item.Overview || 'No overview available';
-            overlayPlot.style.display = "block";
+            PAUSESCREEN_overlayPlot.textContent = item.Overview || 'No overview available';
+            PAUSESCREEN_overlayPlot.style.display = "block";
         } catch (error) {
             console.error("API fetch error:", error);
         }
     }
 
-    function monitorPlaybackState() {
+    function PAUSESCREEN_monitorPlaybackState() {
         setInterval(() => {
             const videoPlayer = document.querySelector('video');
             if (!videoPlayer) return;
 
             if (videoPlayer.paused && window.location.href.includes("/web/index.html#/video")) {
-                overlay.style.display = 'flex';
+                PAUSESCREEN_overlay.style.display = 'flex';
             } else {
-                overlay.style.display = 'none';
-                currentItemId = null; // Ensure overlay clears when exiting video
+                PAUSESCREEN_overlay.style.display = 'none';
+                PAUSESCREEN_currentItemId = null;
             }
         }, 500);
     }
 
-    function interceptNetworkRequests() {
+    function PAUSESCREEN_extractMediaSourceId(url) {
+        try {
+            const urlObj = new URL(url, window.location.origin);
+            return urlObj.searchParams.get("MediaSourceId");
+        } catch {
+            return null;
+        }
+    }
+
+    function PAUSESCREEN_interceptFetch() {
         const originalFetch = window.fetch;
         window.fetch = async function(...args) {
-            const response = await originalFetch(...args);
-            if (args[0].includes("/Users/") && args[0].includes("/Items/")) {
-                const match = args[0].match(/Items\/(\w{32})/);
-                if (match) {
-                    const itemId = match[1];
-                    fetchItemDetails(itemId);
+            const requestUrl = args[0];
+            if (typeof requestUrl === 'string') {
+                const mediaSourceId = PAUSESCREEN_extractMediaSourceId(requestUrl);
+                if (mediaSourceId) {
+                    PAUSESCREEN_fetchItemDetails(mediaSourceId);
                 }
             }
-            return response;
+            return originalFetch.apply(this, args);
         };
     }
 
-    function monitorURLChange() {
+    function PAUSESCREEN_interceptXHR() {
+        const originalOpen = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+            const mediaSourceId = PAUSESCREEN_extractMediaSourceId(url);
+            if (mediaSourceId) {
+                PAUSESCREEN_fetchItemDetails(mediaSourceId);
+            }
+            return originalOpen.apply(this, arguments);
+        };
+    }
+
+    function PAUSESCREEN_monitorURLChange() {
         let lastURL = window.location.href;
         setInterval(() => {
             if (window.location.href !== lastURL) {
                 lastURL = window.location.href;
                 if (!window.location.href.includes("/web/index.html#/video")) {
-                    clearOverlay();
+                    PAUSESCREEN_clearOverlay();
                 }
             }
         }, 500);
     }
 
-function handleOverlayClick(event) {
-    if (event.target === overlay) { // Ensure only clicks directly on the overlay trigger it
-        overlay.style.display = "none";
-        const videoPlayer = document.querySelector('video');
-        if (videoPlayer && videoPlayer.paused) {
-            videoPlayer.play();
+    function PAUSESCREEN_handleOverlayClick(event) {
+        if (event.target === PAUSESCREEN_overlay) {
+            PAUSESCREEN_overlay.style.display = "none";
+            const videoPlayer = document.querySelector('video');
+            if (videoPlayer && videoPlayer.paused) {
+                videoPlayer.play();
+            }
         }
     }
-}
 
-overlay.addEventListener("click", handleOverlayClick);
+    PAUSESCREEN_overlay.addEventListener("click", PAUSESCREEN_handleOverlayClick);
 
-    interceptNetworkRequests();
-    monitorPlaybackState();
-    monitorURLChange();
+    PAUSESCREEN_interceptFetch();
+    PAUSESCREEN_interceptXHR();
+    PAUSESCREEN_monitorPlaybackState();
+    PAUSESCREEN_monitorURLChange();
 })();
