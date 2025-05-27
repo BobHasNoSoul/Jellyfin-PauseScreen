@@ -1,150 +1,57 @@
-(function () {
-    // Configuration
-    const POLL_INTERVAL = 1000; // 2 seconds
-    const REQUEST_TIMEOUT = 5000; // 5 seconds
-    const FADE_DURATION = 500; // 0.5 seconds
-
-    // State variables
+(function() {
+    let currentVideo = null;
+    let currentItemId = null;
     let userId = null;
     let token = null;
-    let currentItemId = null;
-    let pollingInterval = null;
-    let preloadedItemDetails = null;
-    let activeRequests = [];
-    let isOverlayVisible = false;
+    let lastItemIdCheck = 0;
+    let cleanupListeners = null;
 
-    // Get Jellyfin credentials from localStorage
-    const getJellyfinCredentials = () => {
-        try {
-            const jellyfinCreds = localStorage.getItem("jellyfin_credentials");
-            if (!jellyfinCreds) {
-                console.error("No Jellyfin credentials found in localStorage");
-                return null;
-            }
-
-            const serverCredentials = JSON.parse(jellyfinCreds);
-            const firstServer = serverCredentials.Servers[0];
-            if (!firstServer) {
-                console.error("No servers configured in Jellyfin credentials");
-                return null;
-            }
-
-            return { 
-                token: firstServer.AccessToken, 
-                userId: firstServer.UserId 
-            };
-        } catch (e) {
-            console.error("Error parsing Jellyfin credentials:", e);
-            return null;
-        }
-    };
-
-    // Initialize credentials
-    const credentials = getJellyfinCredentials();
-    if (!credentials) {
-        console.error("Failed to initialize - no valid credentials");
-        return;
-    }
-    
-    userId = credentials.userId;
-    token = credentials.token;
-    console.log("Jellyfin Pause Screen initialized for UserID:", userId);
-
-    // ======================
-    // UI ELEMENT CREATION
-    // ======================
-
-    // Create main overlay container
+    // Create overlay with all styling
     const overlay = document.createElement("div");
-    overlay.id = "jellyfin-pause-overlay";
+    overlay.id = "video-overlay";
     overlay.style.cssText = `
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.85);
-        z-index: 9998;
-        display: flex;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 0;
+        display: none;
         align-items: center;
         justify-content: center;
         color: white;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity ${FADE_DURATION}ms ease, visibility 0s linear ${FADE_DURATION}ms;
-        pointer-events: auto;
     `;
 
-    // Create overlay content container
     const overlayContent = document.createElement("div");
     overlayContent.id = "overlay-content";
-    overlayContent.style.cssText = `
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-        height: 100%;
-        position: relative;
-    `;
+    overlayContent.style.cssText = "display: flex; align-items: center; justify-content: center; text-align: center;";
 
-    // Create logo element
     const overlayLogo = document.createElement("img");
     overlayLogo.id = "overlay-logo";
-    overlayLogo.style.cssText = `
-        position: absolute;
-        width: 50vw;
-        height: auto;
-        left: 5vw;
-        top: 50%;
-        transform: translateY(-50%);
-        display: none;
-        opacity: 0;
-        transition: opacity 300ms ease 200ms;
-        object-fit: contain;
-    `;
+    overlayLogo.style.cssText = "width: 50vw; height: auto; margin-right: 50vw; display: none;";
 
-    // Create disc image element
+    const overlayPlot = document.createElement("div");
+    overlayPlot.id = "overlay-plot";
+    overlayPlot.style.cssText = "top: 38vh; max-width: 40%; height: 50vh; display: block; right: 5vw; position: absolute;";
+
+    overlayContent.appendChild(overlayLogo);
+    overlayContent.appendChild(overlayPlot);
+    overlay.appendChild(overlayContent);
+
     const overlayDisc = document.createElement("img");
     overlayDisc.id = "overlay-disc";
     overlayDisc.style.cssText = `
         position: absolute;
-        width: 12vw;
+        top: 5vh;
+        right: 4vw;
+        width: 10vw;
         height: auto;
-        right: 5vw;
-        top: 10vh;
         display: none;
-        opacity: 0;
-        transition: opacity 300ms ease 300ms;
         animation: spin 10s linear infinite;
-        filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
     `;
+    overlay.appendChild(overlayDisc);
 
-    // Create plot text element
-    const overlayPlot = document.createElement("div");
-    overlayPlot.id = "overlay-plot";
-    overlayPlot.style.cssText = `
-        position: absolute;
-        max-width: 40%;
-        max-height: 60vh;
-        right: 5vw;
-        top: 30vh;
-        display: none;
-        opacity: 0;
-        transition: opacity 300ms ease 400ms;
-        font-size: 1.2rem;
-        line-height: 1.6;
-        text-shadow: 0 0 10px rgba(0,0,0,0.8);
-        overflow: hidden;
-        text-overflow: ellipsis;
-    `;
-
-    // Assemble overlay structure
-    overlayContent.appendChild(overlayLogo);
-    overlayContent.appendChild(overlayDisc);
-    overlayContent.appendChild(overlayPlot);
-    overlay.appendChild(overlayContent);
-
-    // Add spin animation style
     const discStyle = document.createElement("style");
     discStyle.textContent = `
         @keyframes spin {
@@ -154,332 +61,229 @@
     `;
     document.head.appendChild(discStyle);
 
-    // Add overlay to document
     document.body.appendChild(overlay);
 
-    // Style overrides for Jellyfin UI
     const styleOverride = document.createElement("style");
     styleOverride.textContent = `
         .videoOsdBottom {
-            z-index: 9999 !important;
-        }
-        video {
             z-index: 1 !important;
         }
-        #jellyfin-pause-overlay.visible {
-            opacity: 1 !important;
-            visibility: visible !important;
-            transition: opacity ${FADE_DURATION}ms ease !important;
-        }
-        #jellyfin-pause-overlay.visible #overlay-logo,
-        #jellyfin-pause-overlay.visible #overlay-disc,
-        #jellyfin-pause-overlay.visible #overlay-plot {
-            opacity: 1 !important;
+        video {
+            z-index: -1 !important;
         }
     `;
     document.head.appendChild(styleOverride);
 
-    // ======================
-    // CORE FUNCTIONS
-    // ======================
-
-    function clearOverlayContent() {
-        overlayLogo.style.display = "none";
-        overlayLogo.style.opacity = "0";
-        overlayLogo.src = "";
-
-        overlayDisc.style.display = "none";
-        overlayDisc.style.opacity = "0";
-        overlayDisc.src = "";
-
-        overlayPlot.style.display = "none";
-        overlayPlot.style.opacity = "0";
-        overlayPlot.textContent = "";
-
-        preloadedItemDetails = null;
-    }
-
-
-    function abortActiveRequests() {
-        activeRequests.forEach(controller => {
-            if (controller && !controller.signal.aborted) {
-                controller.abort("Cleaning up before new request");
+    // Click handler for overlay
+    overlay.addEventListener('click', function(event) {
+        if (event.target === overlay) {
+            overlay.style.display = "none";
+            if (currentVideo && currentVideo.paused) {
+                currentVideo.play();
             }
-        });
-        activeRequests = [];
-    }
-
-    function createRequestController() {
-        const controller = new AbortController();
-        activeRequests.push(controller);
-        return controller;
-    }
-
-    async function fetchWithTimeout(url, options = {}, timeout = REQUEST_TIMEOUT) {
-        const controller = createRequestController();
-        const timeoutId = setTimeout(() => controller.abort("Request timeout"), timeout);
-        
-        try {
-            const response = await fetch(url, {
-                ...options,
-                signal: controller.signal,
-                headers: {
-                    ...options.headers,
-                    Authorization: `MediaBrowser Client="Jellyfin Web", Device="Jellyfin Pause Screen", DeviceId="PauseScreenExtension", Version="1.0", Token="${token}"`,
-                    "Content-Type": "application/json"
-                }
-            });
-            
-            clearTimeout(timeoutId);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            
-            return response;
-        } catch (error) {
-            clearTimeout(timeoutId);
-            if (error.name === 'AbortError') {
-                console.debug('Request aborted:', url, error.message);
-            } else {
-                console.error('Fetch error:', url, error.message);
-            }
-            throw error;
-        } finally {
-            activeRequests = activeRequests.filter(c => c !== controller);
         }
-    }
+    });
 
-    async function fetchImage(url) {
+    const getCredentials = () => {
+        const creds = localStorage.getItem("jellyfin_credentials");
+        if (!creds) return null;
         try {
-            const response = await fetchWithTimeout(url, { method: 'HEAD' }, 3000);
-            return response.ok ? url : null;
+            const parsed = JSON.parse(creds);
+            const server = parsed.Servers[0];
+            return { token: server.AccessToken, userId: server.UserId };
         } catch {
             return null;
         }
-    }
+    };
 
-    async function fetchItemDetails(itemId) {
-        if (preloadedItemDetails?.Id === itemId) {
-            applyItemDetails(preloadedItemDetails);
-            return;
-        }
+    const clearDisplayData = () => {
+        overlayPlot.textContent = "";
+        overlayLogo.src = "";
+        overlayLogo.style.display = "none";
+        overlayDisc.src = "";
+        overlayDisc.style.display = "none";
+    };
 
-        clearOverlayContent(); // <-- Clear the old content first
-        console.debug("PAUSESCREEN: Fetching details for item:", itemId);
+    const fetchItemInfo = async (itemId) => {
+        clearDisplayData(); // Clear old data before fetching new
+        
         try {
-            const response = await fetchWithTimeout(
-                `${window.location.origin}/Users/${userId}/Items/${itemId}`,
-                { method: 'GET' }
-            );
-
-            const item = await response.json();
-            preloadedItemDetails = item;
+            const domain = window.location.origin;
             
-            // Restored original image fetching logic
-            const imageSources = [
-                `${window.location.origin}/Items/${item.Id}/Images/Logo`,
-                item.ParentId ? `${window.location.origin}/Items/${item.ParentId}/Images/Logo` : null,
-                item.SeriesId ? `${window.location.origin}/Items/${item.SeriesId}/Images/Logo` : null
+            // First fetch basic item info
+            const itemResp = await fetch(`${domain}/Items/${itemId}`, {
+                headers: { "X-Emby-Token": token }
+            });
+            const item = await itemResp.json();
+
+            overlayPlot.textContent = item.Overview || "No description available";
+            
+            // Try to get logo image
+            if (item.ImageTags && item.ImageTags.Logo) {
+                overlayLogo.src = `${domain}/Items/${itemId}/Images/Logo?tag=${item.ImageTags.Logo}`;
+                overlayLogo.style.display = "block";
+            } else {
+                // Also try parent items for logo if current item doesn't have one
+                const logoUrls = [
+                    item.ParentId ? `${domain}/Items/${item.ParentId}/Images/Logo` : null,
+                    item.SeriesId ? `${domain}/Items/${item.SeriesId}/Images/Logo` : null
+                ].filter(Boolean);
+
+                for (const url of logoUrls) {
+                    try {
+                        const img = new Image();
+                        img.src = url;
+                        await new Promise((resolve, reject) => {
+                            img.onload = resolve;
+                            img.onerror = reject;
+                            setTimeout(() => reject(), 1000);
+                        });
+                        overlayLogo.src = url;
+                        overlayLogo.style.display = "block";
+                        break;
+                    } catch {
+                        continue;
+                    }
+                }
+            }
+
+            // Try disc image sources in order
+            const tryDiscImage = async (url) => {
+                try {
+                    const img = new Image();
+                    img.src = url;
+                    await new Promise((resolve, reject) => {
+                        img.onload = resolve;
+                        img.onerror = reject;
+                        setTimeout(() => reject(), 1000);
+                    });
+                    return url;
+                } catch {
+                    return null;
+                }
+            };
+
+            const discUrls = [
+                `${domain}/Items/${itemId}/Images/Disc`,
+                item.ParentId ? `${domain}/Items/${item.ParentId}/Images/Disc` : null,
+                item.SeriesId ? `${domain}/Items/${item.SeriesId}/Images/Disc` : null
             ].filter(Boolean);
 
-            const discSources = [
-                `${window.location.origin}/Items/${item.Id}/Images/Disc?maxWidth=480`,
-                item.ParentId ? `${window.location.origin}/Items/${item.ParentId}/Images/Disc?maxWidth=480` : null,
-                item.SeriesId ? `${window.location.origin}/Items/${item.SeriesId}/Images/Disc?maxWidth=480` : null
-            ].filter(Boolean);
-
-            const [logoResults, discResults] = await Promise.all([
-                Promise.all(imageSources.map(fetchImage)),
-                Promise.all(discSources.map(fetchImage))
-            ]);
-
-            const logoUrl = logoResults.find(url => url !== null);
-            const discUrl = discResults.find(url => url !== null);
-
-            // Apply the found images
-            if (logoUrl) {
-                item.LogoUrl = logoUrl;
+            for (const url of discUrls) {
+                const validUrl = await tryDiscImage(url);
+                if (validUrl) {
+                    overlayDisc.src = validUrl;
+                    overlayDisc.style.display = "block";
+                    break;
+                }
             }
-            if (discUrl) {
-                item.DiscUrl = discUrl;
-            }
-            
-            applyItemDetails(item);
-        } catch (error) {
-            console.error("Failed to fetch item details:", error.message);
-            // Don't clear overlay on fetch errors
-        }
-    }
 
-    function applyItemDetails(item) {
-        if (!item) return;
-
-        currentItemId = item.Id;
-
-        // Set logo image using original logic
-        if (item.LogoUrl) {
-            overlayLogo.src = item.LogoUrl;
-            overlayLogo.style.display = "block";
-        } else {
+        } catch (e) {
+            console.error("Error fetching item info:", e);
+            overlayPlot.textContent = "Unable to fetch item info.";
             overlayLogo.style.display = "none";
-        }
-
-        // Set disc image using original logic
-        if (item.DiscUrl) {
-            overlayDisc.src = item.DiscUrl;
-            overlayDisc.style.display = "block";
-        } else {
             overlayDisc.style.display = "none";
         }
+    };
 
-        // Set plot text
-        overlayPlot.textContent = item.Overview || 'No overview available';
-        overlayPlot.style.display = "block";
-
-        // If overlay should be visible, show it with fade-in
-        if (isOverlayVisible) {
-            showOverlay();
+    // Optimized item ID check
+    const checkForItemId = (force = false) => {
+        const now = Date.now();
+        if (!force && now - lastItemIdCheck < 500) {
+            return currentItemId;
         }
-    }
+        lastItemIdCheck = now;
 
-    function showOverlay() {
-        if (isOverlayVisible) return;
+        const selectors = [
+            '.videoOsdBottom-hidden > div:nth-child(1) > div:nth-child(4) > button:nth-child(3)',
+            'div.page:nth-child(3) > div:nth-child(3) > div:nth-child(1) > div:nth-child(4) > button:nth-child(3)',
+            '.btnUserRating'
+        ];
         
-        isOverlayVisible = true;
-        overlay.style.display = "flex";
-        
-        // Force reflow to ensure transition works
-        void overlay.offsetHeight;
-        
-        overlay.classList.add("visible");
-    }
-
-    function clearOverlay() {
-        if (!isOverlayVisible) return;
-        
-        isOverlayVisible = false;
-        abortActiveRequests();
-        
-        // Instantly hide overlay without fade-out
-        overlay.classList.remove("visible");
-        overlay.style.transition = "none";
-        
-        // Reset elements
-        overlayLogo.style.opacity = "0";
-        overlayDisc.style.opacity = "0";
-        overlayPlot.style.opacity = "0";
-        
-        // Restore transition after hiding
-        setTimeout(() => {
-            overlay.style.transition = `opacity ${FADE_DURATION}ms ease, visibility 0s linear ${FADE_DURATION}ms`;
-        }, 10);
-    }
-
-    async function checkPlaybackStatus() {
-        try {
-            const response = await fetchWithTimeout(
-                `${window.location.origin}/Sessions?ActiveWithinSeconds=30`,
-                { method: 'GET' }
-            );
-
-            const sessions = await response.json();
-            const userSession = sessions.find(session => session.UserId === userId);
-            
-            if (!userSession) {
-                console.debug("No active session found for user");
-                clearOverlay();
-                preloadedItemDetails = null;
-                return;
+        for (const selector of selectors) {
+            const ratingButton = document.querySelector(selector);
+            if (ratingButton && ratingButton.getAttribute('data-id')) {
+                return ratingButton.getAttribute('data-id');
             }
-            
-            const nowPlayingItem = userSession.NowPlayingItem;
-            const isPaused = userSession.PlayState?.IsPaused;
-            
-            if (nowPlayingItem) {
-                // Preload details if this is a new item
-                if (!preloadedItemDetails || preloadedItemDetails.Id !== nowPlayingItem.Id) {
-                    fetchItemDetails(nowPlayingItem.Id).catch(e => {
-                        console.error("Error preloading item:", e.message);
-                    });
-                }
-                
-                // Show/hide overlay based on pause state
-                if (isPaused) {
-                    showOverlay();
-                } else {
-                    clearOverlay();
-                }
-            } else {
-                console.debug("No currently playing item");
-                clearOverlay();
-                preloadedItemDetails = null;
-            }
-        } catch (error) {
-            console.error("Playback status check failed:", error.message);
-            // Don't clear overlay on temporary errors
         }
-    }
+        
+        return null;
+    };
 
-    function startPlaybackMonitoring() {
-        stopPlaybackMonitoring();
-        pollingInterval = setInterval(checkPlaybackStatus, POLL_INTERVAL);
-        checkPlaybackStatus(); // Immediate first check
-    }
-
-    function stopPlaybackMonitoring() {
-        if (pollingInterval) {
-            clearInterval(pollingInterval);
-            pollingInterval = null;
-        }
-        clearOverlay();
-        abortActiveRequests();
-    }
-
-    function monitorURLChange() {
-        let lastURL = window.location.href;
-        const checkURL = () => {
-            if (window.location.href !== lastURL) {
-                lastURL = window.location.href;
-                if (window.location.href.includes("/web/index.html#/video")) {
-                    startPlaybackMonitoring();
-                } else {
-                    stopPlaybackMonitoring();
+    const attachVideoListeners = (video) => {
+        const handlePause = () => {
+            if (video === currentVideo && !video.ended) {
+                const newItemId = checkForItemId(true);
+                if (newItemId && newItemId !== currentItemId) {
+                    currentItemId = newItemId;
+                    fetchItemInfo(newItemId);
                 }
+                overlay.style.display = "flex";
             }
         };
-        setInterval(checkURL, 500);
-    }
 
-    function handleOverlayClick(event) {
-        if (event.target === overlay || event.target.closest('#jellyfin-pause-overlay')) {
-            const videoPlayer = document.querySelector('video');
-            if (videoPlayer?.paused) {
-                videoPlayer.play().catch(e => {
-                    console.error("Failed to resume playback:", e);
-                });
+        const handlePlay = () => {
+            if (video === currentVideo) {
+                overlay.style.display = "none";
             }
-            clearOverlay();
+        };
+
+        video.addEventListener("pause", handlePause);
+        video.addEventListener("play", handlePlay);
+
+        return () => {
+            video.removeEventListener("pause", handlePause);
+            video.removeEventListener("play", handlePlay);
+        };
+    };
+
+    const clearState = () => {
+        overlay.style.display = "none";
+        clearDisplayData();
+        if (cleanupListeners) {
+            cleanupListeners();
+            cleanupListeners = null;
         }
+        currentItemId = null;
+        currentVideo = null;
+    };
+
+    const scanLoop = async () => {
+        const video = document.querySelector(".videoPlayerContainer video");
+        const itemId = checkForItemId();
+
+        if (video && video !== currentVideo) {
+            clearState();
+            currentVideo = video;
+            cleanupListeners = attachVideoListeners(video);
+            
+            const newItemId = checkForItemId(true);
+            if (newItemId) {
+                currentItemId = newItemId;
+                await fetchItemInfo(newItemId);
+            }
+        }
+
+        if (video && itemId && itemId !== currentItemId) {
+            currentItemId = itemId;
+            await fetchItemInfo(itemId);
+        }
+
+        if (!video && currentVideo) {
+            clearState();
+        }
+
+        requestAnimationFrame(scanLoop);
+    };
+
+    // Initialize
+    const creds = getCredentials();
+    if (!creds) {
+        console.error("Jellyfin credentials not found");
+        return;
     }
+    userId = creds.userId;
+    token = creds.token;
 
-    // ======================
-    // EVENT LISTENERS
-    // ======================
-
-    overlay.addEventListener("click", handleOverlayClick);
-
-    // Start monitoring if on video page
-    if (window.location.href.includes("/web/index.html#/video")) {
-        startPlaybackMonitoring();
-    }
-    
-    monitorURLChange();
-
-    // Cleanup on script reload
-    window.addEventListener('beforeunload', () => {
-        stopPlaybackMonitoring();
-    });
-
-    console.log("Jellyfin Pause Screen initialized successfully");
+    requestAnimationFrame(scanLoop);
 })();
