@@ -12,6 +12,9 @@ oh no... i did it again, got bored did some things and now here is a project
 
 basically it is able to pick the items logo and the items plot and then from there also grab the items disc and put them on the screen when paused. It does however have fallbacks so lets say you dont put a disc for every item, thats fine it will go to season and then if there isnt one there it will get the series disc image, same for the logo.. the only thing i didnt do like that is the plot.. because that could go very badly.
 
+# Changelog
+27.5.25 - fixed a revision where i was trying to use api to detect playback state and accidentally made it do a dos on the server i hosted because the sheer amount of users i have.. so i had to find a way to make it client side only... this means finding a new inventive way to detect the currently playing id.. long story short it now does it well enough without the need for session polling so it goes into a self monitor state.
+
 # Requirements
 
 since this is a addition mod this will require either a mod that adds the jellyfin credentials to local_storage (i will cover this manually further down) or if you already have the media bar plugin https://github.com/IAmParadox27/jellyfin-plugin-media-bar/tree/main 
