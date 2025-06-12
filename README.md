@@ -155,6 +155,8 @@ then play any content... any content at all
 go back to the main page and press f5 
 
 
+## How to get disc art
 
-upcoming new mod is extrafanart ressurection (yes with fluid injection for that nice sleek retainable mod) and avatars injection script, changename script that changes the page title whenever it sees the word Jellyfin and last but not least an attempt at a plugin with the file transformation plugin that will hopefully give users global overrides for almost all of the defaults in jellyfins usually per user settings 
+okay so you can either get it manually by scanning your own and uploading them in the edit images tab.. yawn or you can change the "fetcher settings" in the library you want disc images for then check their collection for it (check disc inside the settings for each library you have in fetcher settings)
 
+then search for missing metadata if there are ones that still dont have them you can manually search for them now.
