@@ -35,9 +35,14 @@
     overlayPlot.id = "overlay-plot";
     overlayPlot.style.cssText = "top: 38vh; max-width: 40%; height: 50vh; display: block; right: 5vw; position: absolute;";
 
+    const overlayDetails = document.createElement("div");
+    overlayDetails.id = "overlay-details";
+    overlayDetails.style.cssText = "position: absolute; top: 55%; left: 19vw; margin-left: 12vw; transform: translateX(-50%); width: 50vw; font-size: 22px; font-weight: bold; display: flex; justify-content: center; gap: 30px; font-family: inherit;";
+
     overlayContent.appendChild(overlayLogo);
     overlayContent.appendChild(overlayPlot);
     overlay.appendChild(overlayContent);
+    overlay.appendChild(overlayDetails);
 
     const overlayDisc = document.createElement("img");
     overlayDisc.id = "overlay-disc";
@@ -98,6 +103,7 @@
 
     const clearDisplayData = () => {
         overlayPlot.textContent = "";
+        overlayDetails.innerHTML = "";
         overlayLogo.src = "";
         overlayLogo.style.display = "none";
         overlayDisc.src = "";
@@ -106,18 +112,41 @@
 
     const fetchItemInfo = async (itemId) => {
         clearDisplayData(); // Clear old data before fetching new
-        
+
         try {
             const domain = window.location.origin;
-            
+
             // First fetch basic item info
             const itemResp = await fetch(`${domain}/Items/${itemId}`, {
                 headers: { "X-Emby-Token": token }
             });
             const item = await itemResp.json();
 
+            // Get Year, Rating, and Runtime
+            const year = item.ProductionYear || "";
+            const rating = item.OfficialRating || "";
+            let runtime = "";
+
+            if (item.RunTimeTicks) {
+                const totalMinutes = Math.floor(item.RunTimeTicks / 600000000);
+                const hours = Math.floor(totalMinutes / 60);
+                const minutes = totalMinutes % 60;
+                if (hours > 0) {
+                    runtime = `${hours}h ${minutes}m`;
+                } else {
+                    runtime = `${minutes}m`;
+                }
+            }
+
+            // Display the details, using spans for separation
+            overlayDetails.innerHTML = `
+                ${year ? `<span>${year}</span>` : ''}
+                ${rating ? `<span>${rating}</span>` : ''}
+                ${runtime ? `<span>${runtime}</span>` : ''}
+            `;
+
             overlayPlot.textContent = item.Overview || "No description available";
-            
+
             // Try to get logo image
             if (item.ImageTags && item.ImageTags.Logo) {
                 overlayLogo.src = `${domain}/Items/${itemId}/Images/Logo?tag=${item.ImageTags.Logo}`;
@@ -199,14 +228,14 @@
             'div.page:nth-child(3) > div:nth-child(3) > div:nth-child(1) > div:nth-child(4) > button:nth-child(3)',
             '.btnUserRating'
         ];
-        
+
         for (const selector of selectors) {
             const ratingButton = document.querySelector(selector);
             if (ratingButton && ratingButton.getAttribute('data-id')) {
                 return ratingButton.getAttribute('data-id');
             }
         }
-        
+
         return null;
     };
 
@@ -256,7 +285,7 @@
             clearState();
             currentVideo = video;
             cleanupListeners = attachVideoListeners(video);
-            
+
             const newItemId = checkForItemId(true);
             if (newItemId) {
                 currentItemId = newItemId;
