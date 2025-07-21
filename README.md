@@ -95,10 +95,12 @@ however some people say they DO NOT want the disc because it is "too large" or "
   right: 41vw !important;
   position: absolute !important;
   font-size: 21px !important;
+  pointer-events: none;
 }
 
 #overlay-logo {
     position: absolute !important;
+    pointer-events: none;
     max-width: 50vw !important; /* Max width is half the viewport width */
     max-height: 23vh !important; /* Limits the height */
     width: auto !important; /* Ensures no forced stretching */
