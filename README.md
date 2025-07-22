@@ -126,7 +126,7 @@ you then just need to do this
 
 edit your index.html and add the following 
 
-````
+````js
 const saveJellyfinCredentials = (serverId, accessToken) => {
     const credentials = {
         Servers: [{ Id: serverId, AccessToken: accessToken }],
