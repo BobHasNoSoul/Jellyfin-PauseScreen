@@ -32,7 +32,7 @@ add the following to your custom css for the better styling by myself. (there is
 
 ### With Disc, best version
 
-````
+````css
 #overlay-disc {
   position: absolute !important;  
   top: calc(50vh - (26vw / 2)) !important;
@@ -74,7 +74,7 @@ however some people say they DO NOT want the disc because it is "too large" or "
 
 ### Discless
 
-````
+````css
 #overlay-disc {
   position: absolute !important;  
   top: calc(50vh - (26vw / 2)) !important;
@@ -113,6 +113,9 @@ however some people say they DO NOT want the disc because it is "too large" or "
     object-fit: contain; /* Prevents cropping/stretching */
 }
 
+#overlay-details {
+  pointer-events: none;
+}
 ````
 
 # Manual injection requirement
@@ -123,7 +126,7 @@ you then just need to do this
 
 edit your index.html and add the following 
 
-````
+````js
 const saveJellyfinCredentials = (serverId, accessToken) => {
     const credentials = {
         Servers: [{ Id: serverId, AccessToken: accessToken }],
