@@ -1,4 +1,7 @@
 # Jellyfin-PauseScreen
+
+confirmed working on 10.11.0 
+
 a pause screen for jellyfin that adds the logo and the disc and the description when paused that dissapears when playback is resumed or the video is exited.
 
 ![vlcsnap-2025-03-07-18h57m35s122](https://github.com/user-attachments/assets/c449b0ed-f0c7-438b-b2a0-35703c3f8e16)
